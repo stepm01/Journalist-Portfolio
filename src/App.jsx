@@ -14,6 +14,7 @@ import Portfolio from './pages/Portfolio';
 import ProjectDetail from './pages/ProjectDetail';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
+import Valentine from './pages/Valentine';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -68,6 +69,9 @@ function App() {
 
             {/* Admin Login - No layout */}
             <Route path="/studio-access" element={<AdminLogin />} />
+
+            {/* Valentine's Day Special - No layout */}
+            <Route path="/valentine" element={<Valentine />} />
 
             {/* Protected Admin Routes */}
             <Route path="/studio" element={
