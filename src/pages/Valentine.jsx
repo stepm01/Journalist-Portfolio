@@ -122,8 +122,8 @@ function Valentine() {
         <div className="valentine-card proposal-card">
           <div className="proposal-hearts">💕💖💕</div>
           <h1>One Last Question...</h1>
-          <p className="proposal-text">Will you be my girlfriend?</p>
-          <p className="proposal-subtext">Just try to answer no 😏</p>
+          <p className="proposal-text">Will you be my Valentine?</p>
+          <p className="proposal-subtext">Just try to answer no axchik jan 😏</p>
           
           <div className="proposal-buttons">
             <button className="yes-button" onClick={handleYes}>
