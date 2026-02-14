@@ -44,6 +44,8 @@
   padding: 40px;
   max-width: 500px;
   width: 100%;
+  box-sizing: border-box;
+  margin: 20px;
   box-shadow: 
     0 20px 60px rgba(255, 105, 135, 0.3),
     0 0 100px rgba(255, 182, 193, 0.2);
@@ -332,8 +334,9 @@
 /* Responsive */
 @media (max-width: 600px) {
   .valentine-card {
-    padding: 30px 25px;
-    margin: 10px;
+    padding: 25px 20px;
+    margin: 15px;
+    max-width: calc(100% - 30px);
   }
 
   .question-text {
@@ -349,6 +352,14 @@
     align-items: center;
   }
 
+  .navigation-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .nav-button {
+    width: 100%;
+  }
   .yes-button {
     width: 100%;
   }
