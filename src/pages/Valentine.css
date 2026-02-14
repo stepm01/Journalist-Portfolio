@@ -115,6 +115,8 @@
 .valentine-input,
 .valentine-textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 15px 20px;
   font-size: 1.1rem;
   border: 3px solid #ffd6e0;
