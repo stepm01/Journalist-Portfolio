@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Public can read everything on the site
+    match /{document=**} {
+      allow read: if true;
+    }
+
+    // Only a signed-in admin can write
+    match /settings/{docId}    { allow write: if request.auth != null; }
+    match /experience/{docId}  { allow write: if request.auth != null; }
+    match /reels/{docId}       { allow write: if request.auth != null; }
+    match /bylines/{docId}     { allow write: if request.auth != null; }
+  }
+}

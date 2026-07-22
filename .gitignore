@@ -25,3 +25,7 @@ yarn-error.log*
 .vscode/
 .idea/
 .DS_Store
+*.code-workspace
+
+# Local Claude Code config / skills / worktrees
+.claude/

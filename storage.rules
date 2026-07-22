@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Anyone can view uploaded images (portraits, reel thumbnails, byline covers)
+    match /{allPaths=**} {
+      allow read: if true;
+      // Only a signed-in admin can upload or delete
+      allow write: if request.auth != null;
+    }
+  }
+}

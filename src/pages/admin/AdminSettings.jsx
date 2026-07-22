@@ -1,411 +1,125 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useEffect, useState } from 'react';
+import AdminLayout from '../../components/AdminLayout';
 import { useData } from '../../contexts/DataContext';
-import { Home, FileText, Video, Settings, Upload, X, Save, Eye, EyeOff } from 'lucide-react';
-import './AdminSettings.css';
+import { Plus, Trash2 } from 'lucide-react';
 
-function AdminSettings() {
-  const { currentUser, updatePassword } = useAuth();
+const toText = (arr) => (Array.isArray(arr) ? arr.join(', ') : '');
+const toArr = (str) => str.split(',').map(s => s.trim()).filter(Boolean);
+
+export default function AdminSettings() {
   const { profile, updateProfile, uploadFile } = useData();
-  
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [activeTab, setActiveTab] = useState('profile');
-  
-  const [profileData, setProfileData] = useState({
-    name: '',
-    title: '',
-    bio: '',
-    email: '',
-    phone: '',
-    location: '',
-    profileImage: '',
-    socialLinks: {
-      twitter: '',
-      linkedin: '',
-      instagram: '',
-      github: ''
-    }
+  const [form, setForm] = useState({
+    name: '', tagline: '', bio: '', about: '',
+    focusAreas: '', publications: '', portraitURL: '', email: '', cvURL: ''
   });
-
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false
-  });
+  const [socials, setSocials] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     if (profile) {
-      setProfileData({
+      setForm({
         name: profile.name || '',
-        title: profile.title || '',
+        tagline: profile.tagline || '',
         bio: profile.bio || '',
-        email: profile.email || currentUser?.email || '',
-        phone: profile.phone || '',
-        location: profile.location || '',
-        profileImage: profile.profileImage || '',
-        socialLinks: {
-          twitter: profile.socialLinks?.twitter || '',
-          linkedin: profile.socialLinks?.linkedin || '',
-          instagram: profile.socialLinks?.instagram || '',
-          github: profile.socialLinks?.github || ''
-        }
+        about: profile.about || '',
+        focusAreas: toText(profile.focusAreas),
+        publications: toText(profile.publications),
+        portraitURL: profile.portraitURL || '',
+        email: profile.email || '',
+        cvURL: profile.cvURL || ''
       });
+      setSocials(profile.socials || []);
     }
-  }, [profile, currentUser]);
+  }, [profile]);
 
-  async function handleImageUpload(e) {
-    const file = e.target.files[0];
+  const notify = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 2600); };
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  async function onFile(e) {
+    const file = e.target.files?.[0];
     if (!file) return;
-
-    setLoading(true);
-    const result = await uploadFile(file, `profile/${Date.now()}-${file.name}`);
-    
-    if (result.success) {
-      setProfileData({ ...profileData, profileImage: result.url });
-      setMessage({ type: 'success', text: 'Image uploaded!' });
-    } else {
-      setMessage({ type: 'error', text: result.error });
-    }
-    setLoading(false);
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    setUploading(true);
+    const res = await uploadFile(file, `profile/portrait-${Date.now()}-${file.name}`);
+    setUploading(false);
+    if (res.success) setForm(f => ({ ...f, portraitURL: res.url }));
+    else notify(res.error || 'Upload failed.', false);
   }
 
-  async function handleProfileSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
+  const setSocial = (i, k) => (e) => setSocials(s => s.map((row, idx) => idx === i ? { ...row, [k]: e.target.value } : row));
+  const addSocial = () => setSocials(s => [...s, { label: '', url: '' }]);
+  const removeSocial = (i) => setSocials(s => s.filter((_, idx) => idx !== i));
 
-    const result = await updateProfile(profileData);
-    
-    if (result.success) {
-      setMessage({ type: 'success', text: 'Profile updated successfully!' });
-    } else {
-      setMessage({ type: 'error', text: result.error });
-    }
-    
-    setLoading(false);
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-  }
-
-  async function handlePasswordSubmit(e) {
-    e.preventDefault();
-    
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setMessage({ type: 'error', text: 'New passwords do not match' });
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setMessage({ type: 'error', text: 'Password must be at least 6 characters' });
-      return;
-    }
-
-    setLoading(true);
-    const result = await updatePassword(passwordData.currentPassword, passwordData.newPassword);
-    
-    if (result.success) {
-      setMessage({ type: 'success', text: 'Password updated successfully!' });
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } else {
-      setMessage({ type: 'error', text: result.error });
-    }
-    
-    setLoading(false);
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+  async function save() {
+    setSaving(true);
+    const payload = {
+      ...form,
+      focusAreas: toArr(form.focusAreas),
+      publications: toArr(form.publications),
+      socials: socials.filter(s => s.label && s.url)
+    };
+    const res = await updateProfile(payload);
+    setSaving(false);
+    notify(res.success ? 'Profile saved.' : (res.error || 'Save failed.'), res.success);
   }
 
   return (
-    <div className="admin-settings">
-      <aside className="admin-sidebar">
-        <div className="sidebar-header">
-          <Link to="/studio" className="sidebar-logo"><span>✦</span></Link>
-          <span className="sidebar-title">Studio</span>
-        </div>
-        <nav className="sidebar-nav">
-          <Link to="/studio" className="nav-item"><Home size={20} /><span>Dashboard</span></Link>
-          <Link to="/studio/blog" className="nav-item"><FileText size={20} /><span>Blog Posts</span></Link>
-          <Link to="/studio/projects" className="nav-item"><Video size={20} /><span>Projects</span></Link>
-          <Link to="/studio/settings" className="nav-item active"><Settings size={20} /><span>Settings</span></Link>
-        </nav>
-      </aside>
+    <AdminLayout title="Settings" subtitle="This drives your hero, about section, and footer.">
+      {toast && <div className={`toast ${toast.ok ? 'ok' : 'err'}`}>{toast.msg}</div>}
 
-      <main className="admin-main">
-        {message.text && (
-          <div className={`toast-message ${message.type}`}>{message.text}</div>
-        )}
-
-        <header className="page-header">
-          <div>
-            <h1>Settings</h1>
-            <p>Manage your profile and account</p>
+      <div className="a-form" style={{ marginBottom: 20 }}>
+        <h2>Identity</h2>
+        <div className="field">
+          <label>Portrait</label>
+          <div className="uploader">
+            <img className="preview" src={form.portraitURL || 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22/>'} alt="" />
+            <label className="file-label">{uploading ? 'Uploading…' : 'Choose image'}<input type="file" accept="image/*" onChange={onFile} /></label>
           </div>
-        </header>
-
-        <div className="settings-tabs">
-          <button
-            className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            Profile
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'security' ? 'active' : ''}`}
-            onClick={() => setActiveTab('security')}
-          >
-            Security
-          </button>
         </div>
-
-        <div className="settings-content">
-          {activeTab === 'profile' && (
-            <form onSubmit={handleProfileSubmit} className="settings-form">
-              <div className="form-section">
-                <h3>Profile Photo</h3>
-                <div className="photo-upload">
-                  <div className="photo-preview">
-                    {profileData.profileImage ? (
-                      <>
-                        <img src={profileData.profileImage} alt="Profile" />
-                        <button 
-                          type="button" 
-                          className="remove-photo"
-                          onClick={() => setProfileData({ ...profileData, profileImage: '' })}
-                        >
-                          <X size={16} />
-                        </button>
-                      </>
-                    ) : (
-                      <div className="photo-placeholder">
-                        {profileData.name?.charAt(0) || 'A'}
-                      </div>
-                    )}
-                  </div>
-                  <div className="photo-actions">
-                    <label className="upload-btn">
-                      <Upload size={18} />
-                      Upload Photo
-                      <input type="file" accept="image/*" onChange={handleImageUpload} />
-                    </label>
-                    <p>Recommended: Square image, at least 400×400px</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-section">
-                <h3>Basic Information</h3>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Full Name</label>
-                    <input
-                      type="text"
-                      value={profileData.name}
-                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                      placeholder="Your name"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Professional Title</label>
-                    <input
-                      type="text"
-                      value={profileData.title}
-                      onChange={(e) => setProfileData({ ...profileData, title: e.target.value })}
-                      placeholder="e.g., Investigative Journalist"
-                    />
-                  </div>
-                </div>
-                <div className="form-group full-width">
-                  <label>Bio</label>
-                  <textarea
-                    value={profileData.bio}
-                    onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                    placeholder="Write a brief bio about yourself..."
-                    rows={5}
-                  />
-                </div>
-              </div>
-
-              <div className="form-section">
-                <h3>Contact Information</h3>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      placeholder="your@email.com"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Phone</label>
-                    <input
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
-                  <div className="form-group full-width">
-                    <label>Location</label>
-                    <input
-                      type="text"
-                      value={profileData.location}
-                      onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                      placeholder="City, Country"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-section">
-                <h3>Social Links</h3>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Twitter / X</label>
-                    <input
-                      type="url"
-                      value={profileData.socialLinks.twitter}
-                      onChange={(e) => setProfileData({ 
-                        ...profileData, 
-                        socialLinks: { ...profileData.socialLinks, twitter: e.target.value }
-                      })}
-                      placeholder="https://twitter.com/username"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>LinkedIn</label>
-                    <input
-                      type="url"
-                      value={profileData.socialLinks.linkedin}
-                      onChange={(e) => setProfileData({ 
-                        ...profileData, 
-                        socialLinks: { ...profileData.socialLinks, linkedin: e.target.value }
-                      })}
-                      placeholder="https://linkedin.com/in/username"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Instagram</label>
-                    <input
-                      type="url"
-                      value={profileData.socialLinks.instagram}
-                      onChange={(e) => setProfileData({ 
-                        ...profileData, 
-                        socialLinks: { ...profileData.socialLinks, instagram: e.target.value }
-                      })}
-                      placeholder="https://instagram.com/username"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>GitHub</label>
-                    <input
-                      type="url"
-                      value={profileData.socialLinks.github}
-                      onChange={(e) => setProfileData({ 
-                        ...profileData, 
-                        socialLinks: { ...profileData.socialLinks, github: e.target.value }
-                      })}
-                      placeholder="https://github.com/username"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button type="submit" className="primary-btn" disabled={loading}>
-                  <Save size={18} />
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {activeTab === 'security' && (
-            <form onSubmit={handlePasswordSubmit} className="settings-form security-form">
-              <div className="form-section">
-                <h3>Change Password</h3>
-                <p className="section-desc">Ensure your account stays secure by using a strong password.</p>
-                
-                <div className="password-fields">
-                  <div className="form-group">
-                    <label>Current Password</label>
-                    <div className="password-input">
-                      <input
-                        type={showPasswords.current ? 'text' : 'password'}
-                        value={passwordData.currentPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                        placeholder="Enter current password"
-                        required
-                      />
-                      <button 
-                        type="button"
-                        className="toggle-password"
-                        onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
-                      >
-                        {showPasswords.current ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>New Password</label>
-                    <div className="password-input">
-                      <input
-                        type={showPasswords.new ? 'text' : 'password'}
-                        value={passwordData.newPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                        placeholder="Enter new password"
-                        required
-                      />
-                      <button 
-                        type="button"
-                        className="toggle-password"
-                        onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                      >
-                        {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>Confirm New Password</label>
-                    <div className="password-input">
-                      <input
-                        type={showPasswords.confirm ? 'text' : 'password'}
-                        value={passwordData.confirmPassword}
-                        onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                        placeholder="Confirm new password"
-                        required
-                      />
-                      <button 
-                        type="button"
-                        className="toggle-password"
-                        onClick={() => setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })}
-                      >
-                        {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-actions">
-                <button type="submit" className="primary-btn" disabled={loading}>
-                  {loading ? 'Updating...' : 'Update Password'}
-                </button>
-              </div>
-            </form>
-          )}
+        <div className="field-row">
+          <div className="field"><label>Full name</label><input value={form.name} onChange={set('name')} placeholder="Anna Reyes" /></div>
+          <div className="field"><label>Email</label><input value={form.email} onChange={set('email')} placeholder="anna@example.com" /></div>
         </div>
-      </main>
-    </div>
+        <div className="field">
+          <label>Hero tagline</label>
+          <input value={form.tagline} onChange={set('tagline')} placeholder="reports in *motion*." />
+          <div className="hint">Wrap a word in *asterisks* to accent it in red.</div>
+        </div>
+        <div className="field"><label>Hero subtitle</label><textarea value={form.bio} onChange={set('bio')} placeholder="One or two sentences under your name." /></div>
+      </div>
+
+      <div className="a-form" style={{ marginBottom: 20 }}>
+        <h2>About</h2>
+        <div className="field">
+          <label>About text</label>
+          <textarea value={form.about} onChange={set('about')} style={{ minHeight: 160 }}
+            placeholder={'First line is the big lead statement.\nEach new line becomes a paragraph in the body.'} />
+          <div className="hint">First line = the large lead. Following lines = body paragraphs.</div>
+        </div>
+        <div className="field"><label>Focus areas</label><input value={form.focusAreas} onChange={set('focusAreas')} placeholder="Investigative, Local gov, Short-form video" /><div className="hint">Comma-separated tags.</div></div>
+        <div className="field"><label>Publications (hero marquee)</label><input value={form.publications} onChange={set('publications')} placeholder="City Beat, The Dispatch, Reel Report" /><div className="hint">Comma-separated names that scroll across the hero.</div></div>
+      </div>
+
+      <div className="a-form">
+        <h2>Contact &amp; links</h2>
+        <div className="field"><label>CV / résumé link</label><input value={form.cvURL} onChange={set('cvURL')} placeholder="https://… (link to a hosted PDF)" /></div>
+        <div className="field"><label>Social links</label>
+          {socials.map((s, i) => (
+            <div className="field-row" key={i} style={{ marginBottom: 10, alignItems: 'end' }}>
+              <input value={s.label} onChange={setSocial(i, 'label')} placeholder="Instagram / Reels" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={s.url} onChange={setSocial(i, 'url')} placeholder="https://…" />
+                <button className="icon-btn del" onClick={() => removeSocial(i)}><Trash2 size={16} /></button>
+              </div>
+            </div>
+          ))}
+          <button className="a-btn ghost" onClick={addSocial} style={{ marginTop: 6 }}><Plus size={16} /> Add link</button>
+        </div>
+        <div className="form-actions">
+          <button className="a-btn primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save all changes'}</button>
+        </div>
+      </div>
+    </AdminLayout>
   );
 }
-
-export default AdminSettings;

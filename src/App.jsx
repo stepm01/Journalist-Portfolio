@@ -1,104 +1,50 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { DataProvider } from './contexts/DataContext';
-
-// Layout Components
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Public Pages
 import Home from './pages/Home';
-import Portfolio from './pages/Portfolio';
-import ProjectDetail from './pages/ProjectDetail';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import Valentine from './pages/Valentine';
 
-// Admin Pages
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminBlog from './pages/admin/AdminBlog';
-import AdminProjects from './pages/admin/AdminProjects';
-import AdminSettings from './pages/admin/AdminSettings';
+/* Admin is code-split so the public landing page stays lean & fast. */
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const AdminExperience = lazy(() => import('./pages/admin/AdminExperience'));
+const AdminReels = lazy(() => import('./pages/admin/AdminReels'));
+const AdminBylines = lazy(() => import('./pages/admin/AdminBylines'));
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 
-// Layout wrapper for public pages
-function PublicLayout({ children }) {
-  return (
-    <>
-      <Navbar />
-      {children}
-      <Footer />
-    </>
-  );
-}
+const Fallback = () => (
+  <div style={{
+    minHeight: '100vh', display: 'grid', placeItems: 'center',
+    background: 'var(--paper)', color: 'var(--muted)',
+    fontFamily: 'var(--font-mono)', letterSpacing: '.15em', fontSize: 13
+  }}>
+    LOADING…
+  </div>
+);
 
-function App() {
+export default function App() {
   return (
     <Router>
       <AuthProvider>
         <DataProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={
-              <PublicLayout>
-                <Home />
-              </PublicLayout>
-            } />
-            <Route path="/portfolio" element={
-              <PublicLayout>
-                <Portfolio />
-              </PublicLayout>
-            } />
-            <Route path="/portfolio/:id" element={
-              <PublicLayout>
-                <ProjectDetail />
-              </PublicLayout>
-            } />
-            <Route path="/blog" element={
-              <PublicLayout>
-                <Blog />
-              </PublicLayout>
-            } />
-            <Route path="/blog/:id" element={
-              <PublicLayout>
-                <BlogPost />
-              </PublicLayout>
-            } />
+          <Suspense fallback={<Fallback />}>
+            <Routes>
+              {/* Public: single landing page (nav + footer are built into Home) */}
+              <Route path="/" element={<Home />} />
 
-            {/* Admin Login - No layout */}
-            <Route path="/studio-access" element={<AdminLogin />} />
-
-            {/* Valentine's Day Special - No layout */}
-            <Route path="/valentine" element={<Valentine />} />
-
-            {/* Protected Admin Routes */}
-            <Route path="/studio" element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/studio/blog" element={
-              <ProtectedRoute>
-                <AdminBlog />
-              </ProtectedRoute>
-            } />
-            <Route path="/studio/projects" element={
-              <ProtectedRoute>
-                <AdminProjects />
-              </ProtectedRoute>
-            } />
-            <Route path="/studio/settings" element={
-              <ProtectedRoute>
-                <AdminSettings />
-              </ProtectedRoute>
-            } />
-          </Routes>
+              {/* Admin */}
+              <Route path="/studio-access" element={<AdminLogin />} />
+              <Route path="/studio" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/studio/experience" element={<ProtectedRoute><AdminExperience /></ProtectedRoute>} />
+              <Route path="/studio/reels" element={<ProtectedRoute><AdminReels /></ProtectedRoute>} />
+              <Route path="/studio/bylines" element={<ProtectedRoute><AdminBylines /></ProtectedRoute>} />
+              <Route path="/studio/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+            </Routes>
+          </Suspense>
         </DataProvider>
       </AuthProvider>
     </Router>
   );
 }
-
-export default App;
